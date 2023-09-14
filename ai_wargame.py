@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass, field
 from time import sleep
-from typing import Tuple, TypeVar, Type, Iterable, ClassVar
+from typing import Tuple, TypeVar, Type, Iterable, ClassVar, Union
 import random
 import requests
 
@@ -309,22 +309,34 @@ class Game:
             target.mod_health(health_delta)
             self.remove_dead(coord)
 
-    def is_valid_move(self, coords : CoordPair) -> bool:
+    def is_valid_move(self, coords : CoordPair) -> Tuple[bool, Union[str, None]]:
         """Validate a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
         if not self.is_valid_coord(coords.src) or not self.is_valid_coord(coords.dst):
             return False
-        unit = self.get(coords.src)
-        if unit is None or unit.player != self.next_player:
+        source_unit = self.get(coords.src)
+        if source_unit is None or source_unit.player != self.next_player: # check if unit at source belongs to the current player
             return False
-        unit = self.get(coords.dst)
-        return (unit is None)
+        destination_unit = self.get(coords.dst)
+        if destination_unit is None:
+            return True
+        elif source_unit.player == destination_unit.player:
+            return (True, "repair")
+        elif source_unit.player != destination_unit.player:
+            return (True, "attack")
+
 
     def perform_move(self, coords : CoordPair) -> Tuple[bool,str]:
         """Validate and perform a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
-        if self.is_valid_move(coords):
-            self.set(coords.dst,self.get(coords.src))
-            self.set(coords.src,None)
-            return (True,"")
+        valid_move, move_type = self.is_valid_move(coords)
+        if valid_move:
+            if move_type == "repair":
+                return ## implement repair logic
+            elif move_type == "attack":
+                return ## implement attack logic
+            else:
+                self.set(coords.dst,self.get(coords.src))
+                self.set(coords.src,None)
+                return (True,"")
         return (False,"invalid move")
 
     def next_turn(self):
