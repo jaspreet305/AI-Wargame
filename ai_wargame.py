@@ -319,6 +319,9 @@ class Game:
         destination_unit = self.get(coords.dst)
         if destination_unit is None:
             return (True, None)
+        elif (source_unit == destination_unit) and (coords.src == coords.dst):
+            print("Self-destruct sequence initiated...")
+            return (True, "self-destruct")
         elif source_unit.player == destination_unit.player:
             print("Repairing friendly...")
             return (True, "repair")
@@ -342,6 +345,7 @@ class Game:
                 attack_damage = attacking_unit.damage_table[attacking_unit.type.value][unit_to_attack.type.value]
                 unit_to_attack.mod_health(-attack_damage)
 
+                # Counter attack damage
                 counter_attack_damage = unit_to_attack.damage_table[unit_to_attack.type.value][attacking_unit.type.value]
                 attacking_unit.mod_health(-counter_attack_damage)
 
@@ -350,6 +354,19 @@ class Game:
                 self.remove_dead(coords.dst)
                 
                 return (True,"attack")
+            elif move_type == "self-destruct":
+                unit_to_self_destruct = self.get(coords.src)
+                unit_to_self_destruct.mod_health(-unit_to_self_destruct.health)
+                self.remove_dead(coords.src)
+
+                # Get coordinates of adjacent units
+                for coord in coords.src.iter_range(1):
+                    unit = self.get(coord)
+                    if unit is not None:
+                        unit.mod_health(-2)
+                        self.remove_dead(coord)
+
+                return (True,"self-destruct")
             else:
                 self.set(coords.dst,self.get(coords.src))
                 self.set(coords.src,None)
