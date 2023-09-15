@@ -312,16 +312,18 @@ class Game:
     def is_valid_move(self, coords : CoordPair) -> Tuple[bool, Union[str, None]]:
         """Validate a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
         if not self.is_valid_coord(coords.src) or not self.is_valid_coord(coords.dst):
-            return False
+            return (False, None)
         source_unit = self.get(coords.src)
         if source_unit is None or source_unit.player != self.next_player: # check if unit at source belongs to the current player
-            return False
+            return (False, None)
         destination_unit = self.get(coords.dst)
         if destination_unit is None:
-            return True
+            return (True, None)
         elif source_unit.player == destination_unit.player:
+            print("Repairing friendly...")
             return (True, "repair")
         elif source_unit.player != destination_unit.player:
+            print("Attacking enemy!!!")
             return (True, "attack")
 
 
@@ -330,9 +332,11 @@ class Game:
         valid_move, move_type = self.is_valid_move(coords)
         if valid_move:
             if move_type == "repair":
+                unit_to_repair = self.get(coords.dst)
                 return ## implement repair logic
             elif move_type == "attack":
-                return ## implement attack logic
+                unit_to_attack = self.get(coords.dst)
+                return ## implement attack logic (remember, it's bidirectional)
             else:
                 self.set(coords.dst,self.get(coords.src))
                 self.set(coords.src,None)
