@@ -342,13 +342,8 @@ class Game:
                 attack_damage = attacking_unit.damage_table[attacking_unit.type.value][unit_to_attack.type.value]
                 unit_to_attack.mod_health(-attack_damage)
 
-                # In case the blow kills the unit_to_attack
-                self.remove_dead(coords.dst)
-    
-                # Damage done by the unit_to_attack to the attack_unit (counter attack)
-                if (unit_to_attack.is_alive()):
-                    counter_attack_damage = unit_to_attack.damage_table[unit_to_attack.type.value][attacking_unit.type.value]
-                    attacking_unit.mod_health(-counter_attack_damage)
+                counter_attack_damage = unit_to_attack.damage_table[unit_to_attack.type.value][attacking_unit.type.value]
+                attacking_unit.mod_health(-counter_attack_damage)
 
                 # Remove dead units from the board
                 self.remove_dead(coords.src)
