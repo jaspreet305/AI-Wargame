@@ -336,7 +336,16 @@ class Game:
         if valid_move:
             if move_type == "repair":
                 unit_to_repair = self.get(coords.dst)
-                return ## implement repair logic
+                repairing_unit = self.get(coords.src)
+
+                # Calculate the amount of repair done by repairing_unit to unit_to_repair
+                repair_amount = repairing_unit.repair_table[repairing_unit.type.value][unit_to_repair.type.value]
+                unit_to_repair.mod_health(repair_amount)
+
+                # Remove dead units from the board if the repair fully heals the unit
+                self.remove_dead(coords.dst)
+                
+                return (True, "repair")
             elif move_type == "attack":
                 attacking_unit = self.get(coords.src)
                 unit_to_attack = self.get(coords.dst)
