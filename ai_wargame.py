@@ -313,8 +313,17 @@ class Game:
         """Validate a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
         if not self.is_valid_coord(coords.src) or not self.is_valid_coord(coords.dst):
             return (False, None)
+
+        # Check that attackers only move up or left by one position
         source_unit = self.get(coords.src)
-        if source_unit is None or source_unit.player != self.next_player: # check if unit at source belongs to the current player
+        if source_unit and source_unit.player == Player.Attacker:
+            vertical_move = coords.dst.row == coords.src.row - 1 and coords.dst.col == coords.src.col
+            horizontal_move = coords.dst.col == coords.src.col - 1 and coords.dst.row == coords.src.row
+
+            if not (vertical_move or horizontal_move):
+                return (False, None)
+
+        if source_unit is None or source_unit.player != self.next_player: 
             return (False, None)
         destination_unit = self.get(coords.dst)
         if destination_unit is None:
