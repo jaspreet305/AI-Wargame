@@ -332,16 +332,18 @@ class Game:
         if source_unit and source_unit.player == Player.Attacker:
             vertical_move = coords.dst.row == coords.src.row - 1 and coords.dst.col == coords.src.col
             horizontal_move = coords.dst.col == coords.src.col - 1 and coords.dst.row == coords.src.row
+            self_destruct = coords.dst.row == coords.src.row and coords.dst.col == coords.src.col
 
-            if not (vertical_move or horizontal_move):
+            if not (vertical_move or horizontal_move or self_destruct):
                 return (False, None)
             
         # Check that defenders only move down or right by one position
         elif source_unit and source_unit.player == Player.Defender:
             vertical_move = coords.dst.row == coords.src.row + 1 and coords.dst.col == coords.src.col
             horizontal_move = coords.dst.col == coords.src.col + 1 and coords.dst.row == coords.src.row
+            self_destruct = coords.dst.row == coords.src.row and coords.dst.col == coords.src.col
 
-            if not (vertical_move or horizontal_move):
+            if not (vertical_move or horizontal_move or self_destruct):
                 return (False, None)
             
         if destination_unit is None:
@@ -655,6 +657,7 @@ def main():
         print(game)
         winner = game.has_winner()
         if winner is not None:
+            logging.info(f"{winner.name} wins!")
             print(f"{winner.name} wins!")
             break
         if game.options.game_type == GameType.AttackerVsDefender:
