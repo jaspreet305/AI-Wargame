@@ -337,7 +337,7 @@ class Game:
                 return (False, None)
             
         # Check that defenders only move down or right by one position
-        if source_unit and source_unit.player == Player.Defender:
+        elif source_unit and source_unit.player == Player.Defender:
             vertical_move = coords.dst.row == coords.src.row + 1 and coords.dst.col == coords.src.col
             horizontal_move = coords.dst.col == coords.src.col + 1 and coords.dst.row == coords.src.row
 
@@ -439,6 +439,7 @@ class Game:
                 else:
                     output += f"{str(unit):^3} "
             output += "\n"
+        logging.info(output)
         return output
 
     def __str__(self) -> str:
@@ -458,6 +459,7 @@ class Game:
             s = input(F'Player {self.next_player.name}, enter your move: ')
             coords = CoordPair.from_string(s)
             if coords is not None and self.is_valid_coord(coords.src) and self.is_valid_coord(coords.dst):
+                logging.info(f"Player {self.next_player.name}'s move: {coords}")
                 return coords
             else:
                 print('Invalid coordinates! Try again.')
