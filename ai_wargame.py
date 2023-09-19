@@ -8,6 +8,8 @@ from time import sleep
 from typing import Tuple, TypeVar, Type, Iterable, ClassVar, Union
 import random
 import requests
+import logging
+import os
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
@@ -224,6 +226,7 @@ class Options:
     game_type : GameType = GameType.AttackerVsDefender
     alpha_beta : bool = True
     max_turns : int | None = 100
+    timeout : int | None = 100
     randomize_moves : bool = True
     broker : str | None = None
 
@@ -250,6 +253,11 @@ class Game:
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
+        filename = f'gameTrace-{self.options.alpha_beta}-{self.options.timeout}-{self.options.max_turns}.txt'
+        if os.path.exists(filename):
+            os.remove(filename)
+    
+        logging.basicConfig(filename=filename, level=logging.INFO, format='%(message)s')
         dim = self.options.dim
         self.board = [[None for _ in range(dim)] for _ in range(dim)]
         md = dim-1
