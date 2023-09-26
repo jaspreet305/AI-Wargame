@@ -371,7 +371,7 @@ class Game:
             horizontal_move = coords.dst.col == coords.src.col - 1 and coords.dst.row == coords.src.row
             self_destruct = coords.dst.row == coords.src.row and coords.dst.col == coords.src.col
 
-            if not (vertical_move or horizontal_move or self_destruct):
+            if not (vertical_move or horizontal_move or self_destruct or source_unit.type is UnitType.Virus or source_unit.type is UnitType.Tech):
                 return (False, None)
             
         # Check that defenders only move down or right by one position
@@ -380,7 +380,7 @@ class Game:
             horizontal_move = coords.dst.col == coords.src.col + 1 and coords.dst.row == coords.src.row
             self_destruct = coords.dst.row == coords.src.row and coords.dst.col == coords.src.col
 
-            if not (vertical_move or horizontal_move or self_destruct):
+            if not (vertical_move or horizontal_move or self_destruct or source_unit.type is UnitType.Tech):
                 return (False, None)
             
         if destination_unit is None:
