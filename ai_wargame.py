@@ -382,6 +382,15 @@ class Game:
 
             if not (vertical_move or horizontal_move or self_destruct or source_unit.type is UnitType.Tech):
                 return (False, None)
+
+        # Check if the unit is engaged in combat
+        for adjacent_coord in coords.src.iter_adjacent():
+            adjacent_unit = self.get(adjacent_coord)
+            if adjacent_unit and adjacent_unit.player != source_unit.player:
+                # If a spot is empty or occupied by a friendly unit
+                if destination_unit is None or destination_unit.player == self.next_player: 
+                    return (False, "Invalid Move: Combat mode!")
+
             
         if destination_unit is None:
             logging.info(f"{self.next_player.name}'s move: {coords.src} to {coords.dst}.\n")
