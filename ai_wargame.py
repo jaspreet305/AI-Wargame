@@ -384,15 +384,16 @@ class Game:
                 return (False, None)
             
         if destination_unit is None:
+            logging.info(f"{self.next_player.name}'s move: {coords.src} to {coords.dst}.\n")
             return (True, None)
         elif (source_unit == destination_unit) and (coords.src == coords.dst):
-            print("Self-destruct sequence initiated...")
+            logging.info(f"{self.next_player.name}'s {source_unit.type.name} self-destructing at: {coords.src}!\n")
             return (True, "self-destruct")
         elif source_unit.player == destination_unit.player:
-            print("Repairing friendly...")
+            logging.info(f"{self.next_player.name}'s {source_unit.type.name} at {coords.src} repairing friendly {destination_unit.type.name} at {coords.dst}.\n")
             return (True, "repair")
         elif source_unit.player != destination_unit.player:
-            print("Attacking enemy!!!")
+            logging.info(f"{self.next_player.name}'s {source_unit.type.name} at {coords.src} attacking enemy's {destination_unit.type.name} at {coords.dst}.\n")
             return (True, "attack")
 
 
@@ -498,7 +499,6 @@ class Game:
             s = input(F'Player {self.next_player.name}, enter your move: ')
             coords = CoordPair.from_string(s)
             if coords is not None and self.is_valid_coord(coords.src) and self.is_valid_coord(coords.dst):
-                logging.info(f"Player {self.next_player.name}'s move: {coords}")
                 return coords
             else:
                 print('Invalid coordinates! Try again.')
@@ -694,7 +694,7 @@ def main():
         print(game)
         winner = game.has_winner()
         if winner is not None:
-            logging.info(f"{winner.name} wins!")
+            logging.info(f"{winner.name} wins in {game.turns_played} turns!")
             print(f"{winner.name} wins!")
             break
         if game.options.game_type == GameType.AttackerVsDefender:
