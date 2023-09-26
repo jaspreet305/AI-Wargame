@@ -387,10 +387,11 @@ class Game:
         for adjacent_coord in coords.src.iter_adjacent():
             adjacent_unit = self.get(adjacent_coord)
             if adjacent_unit and adjacent_unit.player != source_unit.player:
-                # If a spot is empty or occupied by a friendly unit
-                if destination_unit is None or destination_unit.player == self.next_player: 
-                    return (False, "Invalid Move: Combat mode!")
-
+                if source_unit.type in {UnitType.AI, UnitType.Firewall, UnitType.Program}:
+                    # If a spot is empty or occupied by a friendly unit
+                    if destination_unit is None or destination_unit.player == self.next_player:
+                        if not (source_unit == destination_unit) and (coords.src == coords.dst):
+                            return (False, "Invalid Move: Combat mode!")
             
         if destination_unit is None:
             logging.info(f"{self.next_player.name}'s move: {coords.src} to {coords.dst}.\n")
@@ -416,6 +417,9 @@ class Game:
 
                 # Calculate the amount of repair done by repairing_unit to unit_to_repair
                 repair_amount = repairing_unit.repair_table[repairing_unit.type.value][unit_to_repair.type.value]
+                if repair_amount == 0:
+                    return (False, "invalid move")
+                
                 unit_to_repair.mod_health(repair_amount)
 
                 # Remove dead units from the board if the repair fully heals the unit
