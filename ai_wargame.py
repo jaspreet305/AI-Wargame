@@ -253,11 +253,48 @@ class Game:
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
-        filename = f'gameTrace-{self.options.alpha_beta}-{self.options.timeout}-{self.options.max_turns}.txt'
+        is_ai = self.options.alpha_beta
+        timeout = self.options.timeout
+        max_turns = self.options.max_turns
+        game_type = self.options.game_type
+
+        filename = f'gameTrace-{is_ai}-{timeout}-{max_turns}.txt'
+        
         if os.path.exists(filename):
             os.remove(filename)
     
         logging.basicConfig(filename=filename, level=logging.INFO, format='%(message)s')
+        
+        player_one = ""
+        player_two = ""
+
+        if (game_type.value == 0):
+            player_one = "Human"
+            player_two = "Human"
+        elif (game_type.value == 1):
+            player_one = "Human"
+            player_two = "AI"
+        elif (game_type.value == 2):
+            player_one = "AI"
+            player_two = "Human"
+        elif (game_type.value == 3):
+            player_one = "AI"
+            player_two = "AI"
+
+        table_data = [
+            ["Timeout    ", f"{self.options.timeout}"],
+            ["Max Turns  ", f"{self.options.max_turns}"],
+            ["Alpha Beta ", f"{self.options.alpha_beta}"],
+            ["Play Mode  ", f"Player 1: {player_one}, Player 2: {player_two}"],
+        ]
+
+        if (game_type.value == 1 or game_type.value == 2 or game_type.value == 3):
+            table_data.append(["Heuristic", f"e0 e1 e2"])
+
+        table_str = "\n".join(["\t".join(row) for row in table_data])
+
+        logging.info(f"{table_str}\n")
+
         dim = self.options.dim
         self.board = [[None for _ in range(dim)] for _ in range(dim)]
         md = dim-1
