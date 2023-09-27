@@ -358,6 +358,11 @@ class Game:
         """Validate a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
         destination_unit = self.get(coords.dst)
         source_unit = self.get(coords.src)
+        up_move = coords.dst.row == coords.src.row - 1 and coords.dst.col == coords.src.col
+        down_move = coords.dst.row == coords.src.row + 1 and coords.dst.col == coords.src.col
+        left_move = coords.dst.col == coords.src.col - 1 and coords.dst.row == coords.src.row
+        right_move = coords.dst.col == coords.src.col + 1 and coords.dst.row == coords.src.row
+        self_destruct = coords.dst.row == coords.src.row and coords.dst.col == coords.src.col
         
         if not self.is_valid_coord(coords.src) or not self.is_valid_coord(coords.dst):
             return (False, None)
@@ -367,20 +372,14 @@ class Game:
         
         # Check that attackers only move up or left by one position
         if source_unit and source_unit.player == Player.Attacker:
-            vertical_move = coords.dst.row == coords.src.row - 1 and coords.dst.col == coords.src.col
-            horizontal_move = coords.dst.col == coords.src.col - 1 and coords.dst.row == coords.src.row
-            self_destruct = coords.dst.row == coords.src.row and coords.dst.col == coords.src.col
-
-            if not (vertical_move or horizontal_move or self_destruct or source_unit.type is UnitType.Virus or source_unit.type is UnitType.Tech):
+            valid_virus_move = (source_unit.type is UnitType.Virus) and (down_move or right_move)
+            if not (up_move or left_move or self_destruct or valid_virus_move):
                 return (False, None)
             
         # Check that defenders only move down or right by one position
         elif source_unit and source_unit.player == Player.Defender:
-            vertical_move = coords.dst.row == coords.src.row + 1 and coords.dst.col == coords.src.col
-            horizontal_move = coords.dst.col == coords.src.col + 1 and coords.dst.row == coords.src.row
-            self_destruct = coords.dst.row == coords.src.row and coords.dst.col == coords.src.col
-
-            if not (vertical_move or horizontal_move or self_destruct or source_unit.type is UnitType.Tech):
+            valid_tech_move = (source_unit.type is UnitType.Tech) and (left_move or up_move)
+            if not (down_move or right_move or self_destruct or valid_tech_move):
                 return (False, None)
 
         # Check if the unit is engaged in combat
@@ -390,7 +389,7 @@ class Game:
                 if source_unit.type in {UnitType.AI, UnitType.Firewall, UnitType.Program}:
                     # If a spot is empty or occupied by a friendly unit
                     if destination_unit is None or destination_unit.player == self.next_player:
-                        if not (source_unit == destination_unit) and (coords.src == coords.dst):
+                        if not self_destruct:
                             return (False, "Invalid Move: Combat mode!")
             
         if destination_unit is None:
