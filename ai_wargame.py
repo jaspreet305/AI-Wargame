@@ -416,11 +416,11 @@ class Game:
 
                 # Calculate the amount of repair done by repairing_unit to unit_to_repair
                 repair_amount = repairing_unit.repair_table[repairing_unit.type.value][unit_to_repair.type.value]
-                if repair_amount == 0:
+                if repair_amount == 0 or unit_to_repair.health == 9: 
                     return (False, "invalid move")
                 
                 unit_to_repair.mod_health(repair_amount)
-
+                logging.info(f"Repair amount: {repair_amount}")
                 # Remove dead units from the board if the repair fully heals the unit
                 self.remove_dead(coords.dst)
                 
@@ -437,6 +437,8 @@ class Game:
                 counter_attack_damage = unit_to_attack.damage_table[unit_to_attack.type.value][attacking_unit.type.value]
                 attacking_unit.mod_health(-counter_attack_damage)
 
+                logging.info(f"Combat damage: {attack_damage}")
+                logging.info(f"Counter attack damage: {counter_attack_damage}")
                 # Remove dead units from the board
                 self.remove_dead(coords.src)
                 self.remove_dead(coords.dst)
