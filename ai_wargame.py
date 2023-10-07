@@ -597,14 +597,111 @@ class Game:
         else:
             return (0, None, 0)
 
+    def get_state_representation(self):
+        state = {
+        'VP1': 0, 'TP1': 0, 'FP1': 0, 'PP1': 0, 'AIP1': 0,
+        'VP2': 0, 'TP2': 0, 'FP2': 0, 'PP2': 0, 'AIP2': 0
+        }
+    
+        for row in self.board:
+            for unit in row:
+                if unit:
+                    if unit.player == Player.Attacker:
+                       playervalue = 1
+                    elif unit.player == Player.Defender:
+                        playervalue = 2
+                    key = unit.type.name[0] + 'P' + str(playervalue)
+                    state[key] += 1
+                
+        return state
+
+    def push(self, move):
+        # Save the current state of the board
+        self.previous_board = copy.deepcopy(self.board)
+        
+        # Apply the move on the board
+        # This is a placeholder, you'll need to implement the logic to apply the move
+        # For example, if move is a tuple (source_coord, dest_coord), you can move the unit from source to dest
+        src_unit = self.board[move[0].row][move[0].col]
+        self.board[move[1].row][move[1].col] = src_unit
+        self.board[move[0].row][move[0].col] = None
+
+    def pop(self):
+        # Revert the board to its previous state
+        self.board = self.previous_board
+    
+    def legal_moves(self):
+        moves = []
+        # Iterate over the board and find all legal moves for the current player
+        # This is a placeholder, you'll need to implement the logic to find legal moves
+        # For example, you can check adjacent cells for each unit of the current player
+        for i in range(len(self.board)):
+            for j in range(len(self.board[i])):
+                unit = self.board[i][j]
+                if unit and unit.player == self.next_player:
+                    # Check adjacent cells for legal moves
+                    # Add them to the moves list
+                    pass
+        return moves
+
+    def is_game_over(self):
+        # Check if any player's AI is destroyed
+        for row in self.board:
+            for unit in row:
+                if unit and unit.type == UnitType.AI:
+                    if unit.health <= 0:
+                        return True
+        return False
+        
+    def heuristic_e0(state):
+        # Assuming state is a dictionary with keys 'VP1', 'TP1', 'FP1', 'PP1', 'AIP1', 'VP2', 'TP2', 'FP2', 'PP2', 'AIP2'
+        e0 = (3 * state['VP1'] + 3 * state['TP1'] + 3 * state['FP1'] + 3 * state['PP1'] + 9999 * state['AIP1']) - \
+         (3 * state['VP2'] + 3 * state['TP2'] + 3 * state['FP2'] + 3 * state['PP2'] + 9999 * state['AIP2'])
+        return e0
+
+    def evaluate_board(self):
+        state = self.get_state_representation()
+        return self.heuristic_e0(state)
+
+    def minimax(self, board, depth, maximizing_player):
+        if depth == 0:
+            return self.evaluate_board(board), None  # Return score and None for move
+
+        legal_moves = self.legal_moves()
+        best_move = None
+
+        if maximizing_player:
+            max_eval = float('-inf')
+            for move in legal_moves:
+                board.push(move)
+                eval, _ = self.minimax(board, depth-1, False)
+                board.pop()
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = move
+            return max_eval, best_move
+        else:
+            min_eval = float('inf')
+            for move in legal_moves:
+                board.push(move)
+                eval, _ = self.minimax(board, depth-1, True)
+                board.pop()
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = move
+            return min_eval, best_move
+      
     def suggest_move(self) -> CoordPair | None:
-        """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
-        (score, move, avg_depth) = self.random_move()
+    
+        # Call the Minimax function to get the best move and its score
+        (score, move) = self.minimax(self.board, depth=self.options.max_depth, maximizing_player=False)
+    
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {score}")
-        print(f"Average recursive depth: {avg_depth:0.1f}")
+        # ... (rest of the function remains unchanged)
+        # print(f"Average recursive depth: {avg_depth:0.1f}")
         print(f"Evals per depth: ",end='')
         for k in sorted(self.stats.evaluations_per_depth.keys()):
             print(f"{k}:{self.stats.evaluations_per_depth[k]} ",end='')
@@ -614,6 +711,24 @@ class Game:
             print(f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
         print(f"Elapsed time: {elapsed_seconds:0.1f}s")
         return move
+
+    # def suggest_move(self) -> CoordPair | None:
+    #     """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
+    #     start_time = datetime.now()
+    #     (score, move, avg_depth) = self.random_move()
+    #     elapsed_seconds = (datetime.now() - start_time).total_seconds()
+    #     self.stats.total_seconds += elapsed_seconds
+    #     print(f"Heuristic score: {score}")
+    #     print(f"Average recursive depth: {avg_depth:0.1f}")
+    #     print(f"Evals per depth: ",end='')
+    #     for k in sorted(self.stats.evaluations_per_depth.keys()):
+    #         print(f"{k}:{self.stats.evaluations_per_depth[k]} ",end='')
+    #     print()
+    #     total_evals = sum(self.stats.evaluations_per_depth.values())
+    #     if self.stats.total_seconds > 0:
+    #         print(f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
+    #     print(f"Elapsed time: {elapsed_seconds:0.1f}s")
+    #     return move
 
     def post_move_to_broker(self, move: CoordPair):
         """Send a move to the game broker."""
