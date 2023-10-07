@@ -250,6 +250,7 @@ class Game:
     stats: Stats = field(default_factory=Stats)
     _attacker_has_ai : bool = True
     _defender_has_ai : bool = True
+    previous_board: list[list[Unit | None]] = field(default_factory=list)
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
@@ -310,6 +311,7 @@ class Game:
         self.set(Coord(md-2,md),Unit(player=Player.Attacker,type=UnitType.Program))
         self.set(Coord(md,md-2),Unit(player=Player.Attacker,type=UnitType.Program))
         self.set(Coord(md-1,md-1),Unit(player=Player.Attacker,type=UnitType.Firewall))
+
 
     def clone(self) -> Game:
         """Make a new copy of a game for minimax recursion.
@@ -630,18 +632,22 @@ class Game:
         # Revert the board to its previous state
         self.board = self.previous_board
     
-    def legal_moves(self):
+    def possible_moves(self):
+
+        # iterate over each unit of the current player
+        # for each unit, iterate over all possible moves and check if it's valid
+        # check the damage or repair it does to other units and return the new values TODO
+        # return a list of valid moves
         moves = []
-        # Iterate over the board and find all legal moves for the current player
-        # This is a placeholder, you'll need to implement the logic to find legal moves
-        # For example, you can check adjacent cells for each unit of the current player
-        for i in range(len(self.board)):
-            for j in range(len(self.board[i])):
-                unit = self.board[i][j]
+        for row in range(self.options.dim):
+            for col in range(self.options.dim):
+                unit = self.board[row][col]
                 if unit and unit.player == self.next_player:
-                    # Check adjacent cells for legal moves
-                    # Add them to the moves list
-                    pass
+                    for row2 in range(self.options.dim):
+                        for col2 in range(self.options.dim):
+                            move = CoordPair(Coord(row,col),Coord(row2,col2))
+                            if self.is_valid_move(move):
+                                moves.append(move)
         return moves
 
     def is_game_over(self):
@@ -667,25 +673,25 @@ class Game:
         if depth == 0:
             return self.evaluate_board(board), None  # Return score and None for move
 
-        legal_moves = self.legal_moves()
+        possible_moves = self.possible_moves()
         best_move = None
 
         if maximizing_player:
             max_eval = float('-inf')
-            for move in legal_moves:
+            for move in possible_moves:
                 board.push(move)
                 eval, _ = self.minimax(board, depth-1, False)
-                board.pop()
+                self.pop()
                 if eval > max_eval:
                     max_eval = eval
                     best_move = move
             return max_eval, best_move
         else:
             min_eval = float('inf')
-            for move in legal_moves:
-                board.push(move)
+            for move in possible_moves:
+                self.push(move)
                 eval, _ = self.minimax(board, depth-1, True)
-                board.pop()
+                self.pop()
                 if eval < min_eval:
                     min_eval = eval
                     best_move = move
@@ -797,14 +803,21 @@ def main():
     args = parser.parse_args()
 
     # parse the game type
-    if args.game_type == "attacker":
-        game_type = GameType.AttackerVsComp
-    elif args.game_type == "defender":
-        game_type = GameType.CompVsDefender
-    elif args.game_type == "manual":
-        game_type = GameType.AttackerVsDefender
-    else:
-        game_type = GameType.CompVsComp
+    # if args.game_type == "attacker":
+    #     game_type = GameType.AttackerVsComp
+    # elif args.game_type == "defender":
+    #     game_type = GameType.CompVsDefender
+    # elif args.game_type == "manual":
+    #     game_type = GameType.AttackerVsDefender
+    # else:
+    #     game_type = GameType.CompVsComp
+
+    game_type = GameType.AttackerVsComp
+
+    # ADD A CHECK IF ITS AI
+    # IF IT IS AI THEN CHECK IF AI IS ATTACKER OR DEFENDER
+    # IF AI IS ATTACKER, THEN IT IS MAXIMIZING
+    # IF AI IS DEFENDER, THEN IT IS MINIMIZING
 
     # set up game options
     options = Options(game_type=game_type)
