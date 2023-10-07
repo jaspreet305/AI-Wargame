@@ -678,7 +678,6 @@ def main():
     parser.add_argument('--max_turns', type=int, help='maximum number of turns')
     parser.add_argument('--timeout', type=float, help='timeout between turns for ai')
     parser.add_argument('--alpha_beta', type=bool, help='is alpha-beta or minimax')
-    parser.add_argument('--max_turns', type=int, help='maximum number of turns')
     parser.add_argument('--play_mode', type=str, help='play mode for the game')
     args = parser.parse_args()
 
