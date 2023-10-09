@@ -621,14 +621,44 @@ class Game:
                 AIP += 1
         return VP, TP, FP, PP, AIP
     
+    def minimax(self, depth, is_maximizing):
+        if depth == 0:
+            return self.evaluate_board(), None  # returning a move of None since we don't need it at leaf nodes
+
+        possible_moves = list(self.move_candidates())
+        best_move = possible_moves[0]
+
+        if is_maximizing:
+            max_eval = -float('inf')
+            for move in possible_moves:
+                cloned_game = self.clone()
+                cloned_game.perform_move(move)
+                eval, _ = cloned_game.minimax(depth - 1, False)
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = move
+            return max_eval, best_move
+        else:
+            min_eval = float('inf')
+            for move in possible_moves:
+                cloned_game = self.clone()
+                cloned_game.perform_move(move)
+                eval, _ = cloned_game.minimax(depth - 1, True)
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = move
+            return min_eval, best_move
+    
     def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
-        (score, move, avg_depth) = self.random_move()
+        # (score, move, avg_depth) = self.random_move()
+        (score, move) = self.minimax(3, self.next_player == Player.Attacker)
+        
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {score}")
-        print(f"Average recursive depth: {avg_depth:0.1f}")
+        # print(f"Average recursive depth: {avg_depth:0.1f}")
         print(f"Evals per depth: ",end='')
         for k in sorted(self.stats.evaluations_per_depth.keys()):
             print(f"{k}:{self.stats.evaluations_per_depth[k]} ",end='')
