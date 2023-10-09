@@ -583,7 +583,8 @@ class Game:
             move.src = src
             for dst in src.iter_adjacent():
                 move.dst = dst
-                if self.is_valid_move(move):
+                validmove,  = self.is_valid_move(move)
+                if valid_move:
                     yield move.clone()
             move.dst = src
             yield move.clone()
@@ -597,6 +598,29 @@ class Game:
         else:
             return (0, None, 0)
 
+    def evaluate_board(self) -> int:
+        VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
+        VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
+
+        e0 = (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1) - (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2)
+        return e0
+
+    def count_units(self, player: Player) -> Tuple[int, int, int, int, int]:
+        VP, TP, FP, PP, AIP = 0, 0, 0, 0, 0
+
+        for (_,unit) in self.player_units(player):
+            if unit.type == UnitType.Virus:
+                VP += 1
+            elif unit.type == UnitType.Tech:
+                TP += 1
+            elif unit.type == UnitType.Firewall:
+                FP += 1
+            elif unit.type == UnitType.Program:
+                PP += 1
+            elif unit.type == UnitType.AI:
+                AIP += 1
+        return VP, TP, FP, PP, AIP
+    
     def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
