@@ -583,7 +583,7 @@ class Game:
             move.src = src
             for dst in src.iter_adjacent():
                 move.dst = dst
-                validmove,  = self.is_valid_move(move)
+                valid_move, _ = self.is_valid_move(move)
                 if valid_move:
                     yield move.clone()
             move.dst = src
