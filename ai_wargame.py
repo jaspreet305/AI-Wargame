@@ -399,6 +399,9 @@ class Game:
             logging.info(f"{self.next_player.name}'s {source_unit.type.name} self-destructing at: {coords.src}!\n")
             return (True, "self-destruct")
         elif source_unit.player == destination_unit.player:
+            repair_amount = source_unit.repair_table[source_unit.type.value][destination_unit.type.value]
+            if repair_amount == 0 or destination_unit.health == 9: 
+                return (False, "invalid move")    
             logging.info(f"{self.next_player.name}'s {source_unit.type.name} at {coords.src} repairing friendly {destination_unit.type.name} at {coords.dst}.\n")
             return (True, "repair")
         elif source_unit.player != destination_unit.player:
