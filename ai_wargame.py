@@ -735,18 +735,34 @@ def main():
     parser.add_argument('--play_mode', type=str, help='play mode for the game')
     args = parser.parse_args()
 
-    # parse the game type
-    if args.game_type == "attacker":
-        game_type = GameType.AttackerVsComp
-    elif args.game_type == "defender":
-        game_type = GameType.CompVsDefender
-    elif args.game_type == "manual":
+    # For testing purposes
+    game_type = GameType.AttackerVsComp
+
+    print(f"\n\n--------- Welcome to the AI War Game! ---------\n\n")
+
+    max_turns = int(input('Please enter the max number of turns: '))
+    game_type = int(input(f'\nPlease enter the game type (1-4)\n1. Attacker vs Defender\n2. Attacker vs AI\n3. AI vs Defender\n4. AI vs AI\n'))
+    alpha_beta = True
+    timeout = 100
+
+    if (game_type == 2 or game_type == 3 or game_type == 4):
+        alpha_beta = int(input(f'\nPlease enter 1 for alpha-beta or 0 for minimax: '))
+        if alpha_beta == 0:
+            alpha_beta = False
+        else:
+            alpha_beta = True
+        timeout = int(input(f'\nPlease enter the timeout between turns: '))
+
+    if game_type == 1:
         game_type = GameType.AttackerVsDefender
-    else:
+    elif game_type == 2:
+        game_type = GameType.AttackerVsComp
+    elif game_type == 3:
+        game_type = GameType.CompVsDefender
+    elif game_type == 4:
         game_type = GameType.CompVsComp
 
-    # set up game options
-    options = Options(game_type=game_type)
+    options = Options(max_turns=max_turns, game_type=game_type, alpha_beta=alpha_beta, timeout=timeout)
 
     # override class defaults via command line options
     if args.max_depth is not None:
