@@ -636,8 +636,8 @@ class Game:
         return VP, TP, FP, PP, AIP
     
     def minimax(self, depth, is_maximizing):
-        if depth == 0:
-            return self.evaluate_board_e1(), None  # Use the new heuristic e1
+        if depth == 0 or self.is_finished():
+            return self.evaluate_board_e1(), None
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
@@ -664,8 +664,8 @@ class Game:
             return min_eval, best_move
 
     def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta):
-        if depth == 0:
-            return self.evaluate_board_e1(), None  # Use the heuristic e0
+        if depth == 0 or self.is_finished():
+            return self.evaluate_board_e1(), None
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
