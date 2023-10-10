@@ -663,12 +663,46 @@ class Game:
                     best_move = move
             return min_eval, best_move
 
+    def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta):
+        if depth == 0:
+            return self.evaluate_board_e1(), None  # Use the heuristic e0
+
+        possible_moves = list(self.move_candidates())
+        best_move = possible_moves[0]
+
+        if is_maximizing:
+            max_eval = -float('inf')
+            for move in possible_moves:
+                cloned_game = self.clone()
+                cloned_game.perform_move(move)
+                eval, _ = cloned_game.minimax_alpha_beta(depth - 1, False, alpha, beta)
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = move
+                alpha = max(alpha, eval)  # Update the alpha value
+                if beta <= alpha:  # Beta cut-off
+                    break
+            return max_eval, best_move
+        else:
+            min_eval = float('inf')
+            for move in possible_moves:
+                cloned_game = self.clone()
+                cloned_game.perform_move(move)
+                eval, _ = cloned_game.minimax_alpha_beta(depth - 1, True, alpha, beta)
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = move
+                beta = min(beta, eval)  # Update the beta value
+                if beta <= alpha:  # Alpha cut-off
+                    break
+            return min_eval, best_move
     
     def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
         # (score, move, avg_depth) = self.random_move()
-        (score, move) = self.minimax(3, self.next_player == Player.Attacker)
+        # (score, move) = self.minimax(3, self.next_player == Player.Attacker)
+        (score, move) = self.minimax_alpha_beta(3, self.next_player == Player.Attacker, -float('inf'), float('inf'))
         
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
