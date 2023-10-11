@@ -601,23 +601,32 @@ class Game:
         else:
             return (0, None, 0)
 
-    def evaluate_board(self) -> int:
+    def evaluate_board_dynamic(self, player: Player) -> int:
         VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
         VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
 
-        e0 = (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1) - (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2)
+        if player == Player.Attacker:
+            e0 = (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1) - (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2)
+        else:
+            e0 = (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2) - (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1)
         return e0
     
-    def evaluate_board_e1(self) -> int:
+    def evaluate_board_e1_dynamic(self, player: Player) -> int:
         VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
         VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
+
         # e1 heuristic: Different units have different weights based on their perceived importance.
         # - Viruses (VP) have a weight of 5 as they can destroy the AI in one attack.
         # - Techs (TP) have a weight of 2 due to their defensive capabilities.
         # - Firewalls (FP) and Programs (PP) have a weight of 1.
         # The AI has a slightly higher weight of 10000 compared to e0 to further emphasize its importance.
-        e1 = (5*VP1 + 2*TP1 + 1*FP1 + 1*PP1 + 10000*AIP1) - (5*VP2 + 2*TP2 + 1*FP2 + 1*PP2 + 10000*AIP2)
+
+        if player == Player.Attacker:
+            e1 = (5*VP1 + 2*TP1 + 1*FP1 + 1*PP1 + 10000*AIP1) - (5*VP2 + 2*TP2 + 1*FP2 + 1*PP2 + 10000*AIP2)
+        else:
+            e1 = (5*VP2 + 2*TP2 + 1*FP2 + 1*PP2 + 10000*AIP2) - (5*VP1 + 2*TP1 + 1*FP1 + 1*PP1 + 10000*AIP1)
         return e1
+
 
     def count_units(self, player: Player) -> Tuple[int, int, int, int, int]:
         VP, TP, FP, PP, AIP = 0, 0, 0, 0, 0
@@ -637,7 +646,7 @@ class Game:
     
     def minimax(self, depth, is_maximizing):
         if depth == 0 or self.is_finished():
-            return self.evaluate_board_e1(), None
+            return self.evaluate_board_e1_dynamic(self.next_player), None
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
@@ -665,7 +674,7 @@ class Game:
 
     def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta):
         if depth == 0 or self.is_finished():
-            return self.evaluate_board_e1(), None
+            return self.evaluate_board(), None
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
@@ -701,8 +710,8 @@ class Game:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
         # (score, move, avg_depth) = self.random_move()
-        # (score, move) = self.minimax(3, self.next_player == Player.Attacker)
-        (score, move) = self.minimax_alpha_beta(3, self.next_player == Player.Attacker, -float('inf'), float('inf'))
+        (score, move) = self.minimax(3, self.next_player == Player.Attacker)
+        #(score, move) = self.minimax_alpha_beta(3, self.next_player == Player.Attacker, -float('inf'), float('inf'))
         
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
