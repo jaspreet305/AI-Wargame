@@ -229,6 +229,7 @@ class Options:
     timeout : int | None = 100
     randomize_moves : bool = True
     broker : str | None = None
+    evaluation_function : str | None = "e0"
 
 ##############################################################################################################
 
@@ -621,6 +622,14 @@ class Game:
             num_units += 1
 
         return total_distance / num_units if num_units > 0 else 0
+    
+    def evaluate_board(self, evaluation_function: str) -> int:
+        if (evaluation_function == "e0"):
+            return self.evaluate_board_e0()
+        elif (evaluation_function == "e1"):
+            return self.evaluate_board_e1()
+        elif (evaluation_function == "e2"):
+            return self.evaluate_board_e2()
 
     def evaluate_board_e0(self) -> int:
         VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
@@ -688,7 +697,7 @@ class Game:
     
     def minimax(self, depth, is_maximizing):
         if depth == 0:
-            return self.evaluate_board_e0(), None
+            return self.evaluate_board(self.options.evaluation_function), None
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
@@ -716,7 +725,7 @@ class Game:
 
     def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta):
         if depth == 0:
-            return self.evaluate_board_e0(), None
+            return self.evaluate_board(self.options.evaluation_function), None
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
@@ -819,6 +828,21 @@ class Game:
         except Exception as error:
             print(f"Broker error: {error}")
         return None
+    
+    def choose_evaluation_function(self):
+        while True:
+            choice = input("Choose an evaluation function (e0, e1, e2): ")
+            if choice == "e0":
+                self.evaluation_function = self.evaluate_board_e0
+                break
+            elif choice == "e1":
+                self.evaluation_function = self.evaluate_board_e1
+                break
+            elif choice == "e2":
+                self.evaluation_function = self.evaluate_board_e2
+                break
+            else:
+                print("Invalid choice. Please choose e0, e1, or e2.")
 
 ##############################################################################################################
 
@@ -861,7 +885,15 @@ def main():
     elif game_type == 4:
         game_type = GameType.CompVsComp
 
-    options = Options(max_turns=max_turns, game_type=game_type, alpha_beta=alpha_beta, timeout=timeout)
+    choice = input(f"\nChoose an evaluation function (e0, e1, e2): ")
+    if choice == "e0":
+        evaluation_function = "e0"
+    elif choice == "e1":
+        evaluation_function = "e1"
+    elif choice == "e2":
+        evaluation_function = "e2"
+
+    options = Options(max_turns=max_turns, game_type=game_type, alpha_beta=alpha_beta, timeout=timeout, evaluation_function=evaluation_function)
 
     # override class defaults via command line options
     if args.max_depth is not None:
