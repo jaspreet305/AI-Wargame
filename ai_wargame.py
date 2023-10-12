@@ -601,17 +601,35 @@ class Game:
         else:
             return (0, None, 0)
 
-    def evaluate_board_dynamic(self, player: Player) -> int:
+    def average_distance_to_opponent_ai(self, player: Player) -> float:
+        """Calculate the average Manhattan distance of all units of a player to the opponent's AI."""
+        total_distance = 0
+        num_units = 0
+        opponent = Player.Attacker if player == Player.Defender else Player.Defender
+        ai_coord = None
+    
+        for coord, unit in self.player_units(opponent):
+            if unit.type == UnitType.AI:
+                ai_coord = coord
+                break
+
+        if ai_coord is None:
+            return 99999
+
+        for coord, _ in self.player_units(player):
+            total_distance += abs(coord.row - ai_coord.row) + abs(coord.col - ai_coord.col)
+            num_units += 1
+
+        return total_distance / num_units if num_units > 0 else 0
+
+    def evaluate_board_e0(self) -> int:
         VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
         VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
 
-        if player == Player.Attacker:
-            e0 = (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1) - (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2)
-        else:
-            e0 = (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2) - (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1)
+        e0 = (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1) - (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2)
         return e0
     
-    def evaluate_board_e1_dynamic(self, player: Player) -> int:
+    def evaluate_board_e1(self) -> int:
         VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
         VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
 
@@ -621,12 +639,36 @@ class Game:
         # - Firewalls (FP) and Programs (PP) have a weight of 1.
         # The AI has a slightly higher weight of 10000 compared to e0 to further emphasize its importance.
 
-        if player == Player.Attacker:
-            e1 = (5*VP1 + 2*TP1 + 1*FP1 + 1*PP1 + 10000*AIP1) - (5*VP2 + 2*TP2 + 1*FP2 + 1*PP2 + 10000*AIP2)
-        else:
-            e1 = (5*VP2 + 2*TP2 + 1*FP2 + 1*PP2 + 10000*AIP2) - (5*VP1 + 2*TP1 + 1*FP1 + 1*PP1 + 10000*AIP1)
+        e1 = (5*VP1 + 2*TP1 + 1*FP1 + 1*PP1 + 10000*AIP1) - (5*VP2 + 2*TP2 + 1*FP2 + 1*PP2 + 10000*AIP2)
         return e1
 
+    def evaluate_board_e2(self) -> int:
+        MAX_VALUE = 9999999999999999
+        MIN_VALUE = -999999999999999
+        SELF_DESTRUCT_PENALTY = -10000000000000
+
+        VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
+        VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
+
+        e0 = (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1) - (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2)
+
+        D_avg_attacker = self.average_distance_to_opponent_ai(Player.Attacker)
+        D_avg_defender = self.average_distance_to_opponent_ai(Player.Defender)
+
+        w1 = 1.0
+        w2 = 0.0
+
+        e2 = w1 * e0 - w2 * (D_avg_attacker - D_avg_defender)
+
+        if AIP1 == 0: 
+            e2 += SELF_DESTRUCT_PENALTY
+
+        if e2 == float('inf'):
+            return MAX_VALUE
+        elif e2 == float('-inf'):
+            return MIN_VALUE
+        else:
+            return int(e2)
 
     def count_units(self, player: Player) -> Tuple[int, int, int, int, int]:
         VP, TP, FP, PP, AIP = 0, 0, 0, 0, 0
@@ -645,8 +687,8 @@ class Game:
         return VP, TP, FP, PP, AIP
     
     def minimax(self, depth, is_maximizing):
-        if depth == 0 or self.is_finished():
-            return self.evaluate_board_e1_dynamic(self.next_player), None
+        if depth == 0:
+            return self.evaluate_board_e0(), None
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
@@ -673,8 +715,8 @@ class Game:
             return min_eval, best_move
 
     def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta):
-        if depth == 0 or self.is_finished():
-            return self.evaluate_board(), None
+        if depth == 0:
+            return self.evaluate_board_e0(), None
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
@@ -709,10 +751,12 @@ class Game:
     def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         start_time = datetime.now()
-        # (score, move, avg_depth) = self.random_move()
-        (score, move) = self.minimax(3, self.next_player == Player.Attacker)
-        #(score, move) = self.minimax_alpha_beta(3, self.next_player == Player.Attacker, -float('inf'), float('inf'))
-        
+
+        if (self.options.alpha_beta):
+             (score, move) = self.minimax_alpha_beta(3, self.next_player == Player.Attacker, -float('inf'), float('inf'))
+        else:
+             (score, move) = self.minimax(3, self.next_player == Player.Attacker)
+       
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {score}")
@@ -792,9 +836,6 @@ def main():
     parser.add_argument('--alpha_beta', type=bool, help='is alpha-beta or minimax')
     parser.add_argument('--play_mode', type=str, help='play mode for the game')
     args = parser.parse_args()
-
-    # For testing purposes
-    game_type = GameType.AttackerVsComp
 
     print(f"\n\n--------- Welcome to the AI War Game! ---------\n\n")
 
