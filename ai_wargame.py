@@ -290,7 +290,7 @@ class Game:
         ]
 
         if (game_type.value == 1 or game_type.value == 2 or game_type.value == 3):
-            table_data.append(["Heuristic", f"e0 e1 e2"])
+            table_data.append(["Heuristic", f"{self.options.evaluation_function}"])
 
         table_str = "\n".join(["\t".join(row) for row in table_data])
 
@@ -394,23 +394,19 @@ class Game:
                             return (False, "Invalid Move: Combat mode!")
             
         if destination_unit is None:
-            logging.info(f"{self.next_player.name}'s move: {coords.src} to {coords.dst}.\n")
             return (True, None)
         elif (source_unit == destination_unit) and (coords.src == coords.dst):
-            logging.info(f"{self.next_player.name}'s {source_unit.type.name} self-destructing at: {coords.src}!\n")
             return (True, "self-destruct")
         elif source_unit.player == destination_unit.player:
             repair_amount = source_unit.repair_table[source_unit.type.value][destination_unit.type.value]
             if repair_amount == 0 or destination_unit.health == 9: 
                 return (False, "invalid move")    
-            logging.info(f"{self.next_player.name}'s {source_unit.type.name} at {coords.src} repairing friendly {destination_unit.type.name} at {coords.dst}.\n")
             return (True, "repair")
         elif source_unit.player != destination_unit.player:
-            logging.info(f"{self.next_player.name}'s {source_unit.type.name} at {coords.src} attacking enemy's {destination_unit.type.name} at {coords.dst}.\n")
             return (True, "attack")
 
 
-    def perform_move(self, coords : CoordPair) -> Tuple[bool,str]:
+    def perform_move(self, coords : CoordPair, is_testing: bool = False) -> Tuple[bool,str]:
         """Validate and perform a move expressed as a CoordPair. TODO: WRITE MISSING CODE!!!"""
         valid_move, move_type = self.is_valid_move(coords)
         if valid_move:
@@ -424,7 +420,9 @@ class Game:
                     return (False, "invalid move")
                 
                 unit_to_repair.mod_health(repair_amount)
-                logging.info(f"Repair amount: {repair_amount}")
+                if not is_testing:
+                    logging.info(f"{self.next_player.name}'s {repairing_unit.type.name} at {coords.src} repairing friendly {unit_to_repair.type.name} at {coords.dst}.\n")
+                    logging.info(f"Repair amount: {repair_amount}")
                 # Remove dead units from the board if the repair fully heals the unit
                 self.remove_dead(coords.dst)
                 
@@ -441,8 +439,10 @@ class Game:
                 counter_attack_damage = unit_to_attack.damage_table[unit_to_attack.type.value][attacking_unit.type.value]
                 attacking_unit.mod_health(-counter_attack_damage)
 
-                logging.info(f"Combat damage: {attack_damage}")
-                logging.info(f"Counter attack damage: {counter_attack_damage}")
+                if not is_testing:
+                    logging.info(f"{self.next_player.name}'s {attacking_unit.type.name} at {coords.src} attacking enemy's {unit_to_attack.type.name} at {coords.dst}.\n")
+                    logging.info(f"Combat damage: {attack_damage}")
+                    logging.info(f"Counter attack damage: {counter_attack_damage}")
                 # Remove dead units from the board
                 self.remove_dead(coords.src)
                 self.remove_dead(coords.dst)
@@ -453,6 +453,9 @@ class Game:
                 unit_to_self_destruct.mod_health(-unit_to_self_destruct.health)
                 self.remove_dead(coords.src)
 
+                if not is_testing:
+                    logging.info(f"{self.next_player.name}'s {unit_to_self_destruct.type.name} self-destructing at: {coords.src}!\n")
+
                 # Get coordinates of adjacent units
                 for coord in coords.src.iter_range(1):
                     unit = self.get(coord)
@@ -462,6 +465,8 @@ class Game:
 
                 return (True,"self-destruct")
             else:
+                if not is_testing:
+                    logging.info(f"{self.next_player.name}'s move: {coords.src} to {coords.dst}.\n")
                 self.set(coords.dst,self.get(coords.src))
                 self.set(coords.src,None)
                 return (True,"")
@@ -639,45 +644,29 @@ class Game:
         return e0
     
     def evaluate_board_e1(self) -> int:
-        VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
-        VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
+        # Weights based on unit importance
+        weights = {
+            UnitType.Virus: 5,
+            UnitType.Tech: 2,
+            UnitType.Firewall: 1,
+            UnitType.Program: 1,
+            UnitType.AI: 10000
+        }
 
-        # e1 heuristic: Different units have different weights based on their perceived importance.
-        # - Viruses (VP) have a weight of 5 as they can destroy the AI in one attack.
-        # - Techs (TP) have a weight of 2 due to their defensive capabilities.
-        # - Firewalls (FP) and Programs (PP) have a weight of 1.
-        # The AI has a slightly higher weight of 10000 compared to e0 to further emphasize its importance.
+        # Calculate weighted health for the attacker
+        attacker_weighted_health = sum(unit.health * weights[unit.type] for _, unit in self.player_units(Player.Attacker))
 
-        e1 = (5*VP1 + 2*TP1 + 1*FP1 + 1*PP1 + 10000*AIP1) - (5*VP2 + 2*TP2 + 1*FP2 + 1*PP2 + 10000*AIP2)
-        return e1
+        # Calculate weighted health for the defender
+        defender_weighted_health = sum(unit.health * weights[unit.type] for _, unit in self.player_units(Player.Defender))
+
+        # Return the difference between the attacker's and defender's weighted health
+        return attacker_weighted_health - defender_weighted_health
+
 
     def evaluate_board_e2(self) -> int:
-        MAX_VALUE = 9999999999999999
-        MIN_VALUE = -999999999999999
-        SELF_DESTRUCT_PENALTY = -10000000000000
-
-        VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
-        VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
-
-        e0 = (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1) - (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2)
-
-        D_avg_attacker = self.average_distance_to_opponent_ai(Player.Attacker)
-        D_avg_defender = self.average_distance_to_opponent_ai(Player.Defender)
-
-        w1 = 1.0
-        w2 = 0.0
-
-        e2 = w1 * e0 - w2 * (D_avg_attacker - D_avg_defender)
-
-        if AIP1 == 0: 
-            e2 += SELF_DESTRUCT_PENALTY
-
-        if e2 == float('inf'):
-            return MAX_VALUE
-        elif e2 == float('-inf'):
-            return MIN_VALUE
-        else:
-            return int(e2)
+        attacker_health = sum(unit.health for _, unit in self.player_units(Player.Attacker))
+        defender_health = sum(unit.health for _, unit in self.player_units(Player.Defender))
+        return attacker_health - defender_health
 
     def count_units(self, player: Player) -> Tuple[int, int, int, int, int]:
         VP, TP, FP, PP, AIP = 0, 0, 0, 0, 0
@@ -706,7 +695,7 @@ class Game:
             max_eval = -float('inf')
             for move in possible_moves:
                 cloned_game = self.clone()
-                cloned_game.perform_move(move)
+                cloned_game.perform_move(move, True)
                 eval, _ = cloned_game.minimax(depth - 1, False)
                 if eval > max_eval:
                     max_eval = eval
@@ -716,7 +705,7 @@ class Game:
             min_eval = float('inf')
             for move in possible_moves:
                 cloned_game = self.clone()
-                cloned_game.perform_move(move)
+                cloned_game.perform_move(move, True)
                 eval, _ = cloned_game.minimax(depth - 1, True)
                 if eval < min_eval:
                     min_eval = eval
@@ -734,7 +723,7 @@ class Game:
             max_eval = -float('inf')
             for move in possible_moves:
                 cloned_game = self.clone()
-                cloned_game.perform_move(move)
+                cloned_game.perform_move(move, True)
                 eval, _ = cloned_game.minimax_alpha_beta(depth - 1, False, alpha, beta)
                 if eval > max_eval:
                     max_eval = eval
@@ -747,7 +736,7 @@ class Game:
             min_eval = float('inf')
             for move in possible_moves:
                 cloned_game = self.clone()
-                cloned_game.perform_move(move)
+                cloned_game.perform_move(move, True)
                 eval, _ = cloned_game.minimax_alpha_beta(depth - 1, True, alpha, beta)
                 if eval < min_eval:
                     min_eval = eval
