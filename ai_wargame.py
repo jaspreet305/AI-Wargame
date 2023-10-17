@@ -606,27 +606,6 @@ class Game:
             return (0, move_candidates[0], 1)
         else:
             return (0, None, 0)
-
-    def average_distance_to_opponent_ai(self, player: Player) -> float:
-        """Calculate the average Manhattan distance of all units of a player to the opponent's AI."""
-        total_distance = 0
-        num_units = 0
-        opponent = Player.Attacker if player == Player.Defender else Player.Defender
-        ai_coord = None
-    
-        for coord, unit in self.player_units(opponent):
-            if unit.type == UnitType.AI:
-                ai_coord = coord
-                break
-
-        if ai_coord is None:
-            return 99999
-
-        for coord, _ in self.player_units(player):
-            total_distance += abs(coord.row - ai_coord.row) + abs(coord.col - ai_coord.col)
-            num_units += 1
-
-        return total_distance / num_units if num_units > 0 else 0
     
     def evaluate_board(self, evaluation_function: str) -> int:
         if (evaluation_function == "e0"):
@@ -644,7 +623,6 @@ class Game:
         return e0
     
     def evaluate_board_e1(self) -> int:
-        # Weights based on unit importance
         weights = {
             UnitType.Virus: 5,
             UnitType.Tech: 2,
@@ -659,14 +637,36 @@ class Game:
         # Calculate weighted health for the defender
         defender_weighted_health = sum(unit.health * weights[unit.type] for _, unit in self.player_units(Player.Defender))
 
-        # Return the difference between the attacker's and defender's weighted health
         return attacker_weighted_health - defender_weighted_health
 
-
     def evaluate_board_e2(self) -> int:
-        attacker_health = sum(unit.health for _, unit in self.player_units(Player.Attacker))
-        defender_health = sum(unit.health for _, unit in self.player_units(Player.Defender))
-        return attacker_health - defender_health
+        VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
+        VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
+
+        # Threat Level
+        threat_level_attacker = 5*VP1 + 2*TP1 + FP1 + PP1
+        threat_level_defender = 5*VP2 + 2*TP2 + FP2 + PP2
+
+        # Mobility
+        mobility_attacker = len(list(self.move_candidates_for(Player.Attacker)))
+        mobility_defender = len(list(self.move_candidates_for(Player.Defender)))
+
+        e3 = (threat_level_attacker + mobility_attacker) - (threat_level_defender + mobility_defender)
+        return e3
+
+    def move_candidates_for(self, player: Player) -> Iterable[CoordPair]:
+        """Generate valid move candidates for a specific player."""
+        move = CoordPair()
+        for (src, _) in self.player_units(player):
+            move.src = src
+            for dst in src.iter_adjacent():
+                move.dst = dst
+                valid_move, _ = self.is_valid_move(move)
+                if valid_move:
+                    yield move.clone()
+            move.dst = src
+            yield move.clone()
+
 
     def count_units(self, player: Player) -> Tuple[int, int, int, int, int]:
         VP, TP, FP, PP, AIP = 0, 0, 0, 0, 0
