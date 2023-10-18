@@ -10,6 +10,7 @@ import random
 import requests
 import logging
 import os
+from collections import defaultdict
 
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
@@ -254,6 +255,8 @@ class Game:
     _attacker_has_ai : bool = True
     _defender_has_ai : bool = True
     current_best_move: (CoordPair, ) = None
+    total_evaluations: int = 0  # Added this line
+    evaluations_by_depth: defaultdict[int, int] = field(default_factory=defaultdict)  # Added this line
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
@@ -610,22 +613,26 @@ class Game:
         else:
             return (0, None, 0)
     
-    def evaluate_board(self, evaluation_function: str) -> int:
+    def evaluate_board(self, evaluation_function: str, depth: int) -> int:
         if (evaluation_function == "e0"):
-            return self.evaluate_board_e0()
+            return self.evaluate_board_e0(depth)
         elif (evaluation_function == "e1"):
-            return self.evaluate_board_e1()
+            return self.evaluate_board_e1(depth)
         elif (evaluation_function == "e2"):
-            return self.evaluate_board_e2()
-
-    def evaluate_board_e0(self) -> int:
+            return self.evaluate_board_e2(depth)
+        
+    def evaluate_board_e0(self, depth: int) -> int:
+        self.total_evaluations += 1
+        self.evaluations_by_depth[depth] = self.evaluations_by_depth.get(depth, 0) + 1
         VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
         VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
 
         e0 = (3*VP1 + 3*TP1 + 3*FP1 + 3*PP1 + 9999*AIP1) - (3*VP2 + 3*TP2 + 3*FP2 + 3*PP2 + 9999*AIP2)
         return e0
-    
-    def evaluate_board_e1(self) -> int:
+
+    def evaluate_board_e1(self, depth: int) -> int:
+        self.total_evaluations += 1
+        self.evaluations_by_depth[depth] = self.evaluations_by_depth.get(depth, 0) + 1
         weights = {
             UnitType.Virus: 5,
             UnitType.Tech: 2,
@@ -642,7 +649,9 @@ class Game:
 
         return attacker_weighted_health - defender_weighted_health
 
-    def evaluate_board_e2(self) -> int:
+    def evaluate_board_e2(self, depth: int) -> int:
+        self.total_evaluations += 1
+        self.evaluations_by_depth[depth] = self.evaluations_by_depth.get(depth, 0) + 1
         VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
         VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
 
@@ -689,7 +698,7 @@ class Game:
     
     def minimax(self, depth, is_maximizing, start_time):
         if depth == 0:
-            return self.evaluate_board(self.options.evaluation_function), None
+            return self.evaluate_board(self.options.evaluation_function, depth), None
         
         if (datetime.now() - start_time).total_seconds() > self.options.timeout:
             raise TimeoutException()
@@ -722,7 +731,7 @@ class Game:
 
     def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta, start_time):
         if depth == 0:
-            return self.evaluate_board(self.options.evaluation_function), None
+            return self.evaluate_board(self.options.evaluation_function, depth), None
         
         if (datetime.now() - start_time).total_seconds() > self.options.timeout:
             raise TimeoutException()
@@ -780,7 +789,6 @@ class Game:
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {self.current_best_move[1]}")
-        logging.info(f"Heuristic score: {self.current_best_move[1]}")
         print(f"Evals per depth: ",end='')
         for k in sorted(self.stats.evaluations_per_depth.keys()):
             print(f"{k}:{self.stats.evaluations_per_depth[k]} ",end='')
@@ -789,7 +797,6 @@ class Game:
         if self.stats.total_seconds > 0:
             print(f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
         print(f"Elapsed time: {elapsed_seconds:0.1f}s")
-        logging.info(f"Elapsed time: {elapsed_seconds:0.1f}s")
         return move
 
     def post_move_to_broker(self, move: CoordPair):
@@ -942,6 +949,27 @@ def main():
             else:
                 print("Computer doesn't know what to do!!!")
                 exit(1)
+                
+    total_evals = game.total_evaluations
+    print(f"Cumulative evals: {total_evals}")
+
+    print("Cumulative evals by depth: ", end='')
+    for depth, count in game.evaluations_by_depth.items():
+        print(f"{depth}={count} ", end='')
+    print()
+
+    print("Cumulative % evals by depth: ", end='')
+    for depth, count in game.evaluations_by_depth.items():
+        if total_evals != 0:
+            percentage = (count / total_evals) * 100
+        else:
+            percentage = 0
+        print(f"{depth}={percentage:.1f}% ", end='')
+    print()
+
+    avg_branching_factor = total_evals / (game.evaluations_by_depth[0] if 0 in game.evaluations_by_depth else 1)
+    print(f"Average branching factor: {avg_branching_factor:.1f}")
+
 
 ##############################################################################################################
 
