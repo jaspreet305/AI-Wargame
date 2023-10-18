@@ -780,6 +780,7 @@ class Game:
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
         print(f"Heuristic score: {self.current_best_move[1]}")
+        logging.info(f"Heuristic score: {self.current_best_move[1]}")
         print(f"Evals per depth: ",end='')
         for k in sorted(self.stats.evaluations_per_depth.keys()):
             print(f"{k}:{self.stats.evaluations_per_depth[k]} ",end='')
@@ -788,6 +789,7 @@ class Game:
         if self.stats.total_seconds > 0:
             print(f"Eval perf.: {total_evals/self.stats.total_seconds/1000:0.1f}k/s")
         print(f"Elapsed time: {elapsed_seconds:0.1f}s")
+        logging.info(f"Elapsed time: {elapsed_seconds:0.1f}s")
         return move
 
     def post_move_to_broker(self, move: CoordPair):
