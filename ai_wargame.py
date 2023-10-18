@@ -15,6 +15,7 @@ from collections import defaultdict
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
 MIN_HEURISTIC_SCORE = -2000000000
+TOTAL_EVALUATIONS = 0
 
 class UnitType(Enum):
     """Every unit type."""
@@ -622,7 +623,6 @@ class Game:
             return self.evaluate_board_e2(depth)
         
     def evaluate_board_e0(self, depth: int) -> int:
-        self.total_evaluations += 1
         self.evaluations_by_depth[depth] = self.evaluations_by_depth.get(depth, 0) + 1
         VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
         VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
@@ -631,7 +631,6 @@ class Game:
         return e0
 
     def evaluate_board_e1(self, depth: int) -> int:
-        self.total_evaluations += 1
         self.evaluations_by_depth[depth] = self.evaluations_by_depth.get(depth, 0) + 1
         weights = {
             UnitType.Virus: 5,
@@ -650,7 +649,6 @@ class Game:
         return attacker_weighted_health - defender_weighted_health
 
     def evaluate_board_e2(self, depth: int) -> int:
-        self.total_evaluations += 1
         self.evaluations_by_depth[depth] = self.evaluations_by_depth.get(depth, 0) + 1
         VP1, TP1, FP1, PP1, AIP1 = self.count_units(Player.Attacker)
         VP2, TP2, FP2, PP2, AIP2 = self.count_units(Player.Defender)
@@ -697,7 +695,10 @@ class Game:
         return VP, TP, FP, PP, AIP
     
     def minimax(self, depth, is_maximizing, start_time):
+        global TOTAL_EVALUATIONS
+
         if depth == 0:
+            TOTAL_EVALUATIONS += 1
             return self.evaluate_board(self.options.evaluation_function, depth), None
         
         if (datetime.now() - start_time).total_seconds() > self.options.timeout:
@@ -950,7 +951,7 @@ def main():
                 print("Computer doesn't know what to do!!!")
                 exit(1)
                 
-    total_evals = game.total_evaluations
+    total_evals = TOTAL_EVALUATIONS
     print(f"Cumulative evals: {total_evals}")
 
     print("Cumulative evals by depth: ", end='')
