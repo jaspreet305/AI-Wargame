@@ -651,8 +651,8 @@ class Game:
         mobility_attacker = len(list(self.move_candidates_for(Player.Attacker)))
         mobility_defender = len(list(self.move_candidates_for(Player.Defender)))
 
-        e3 = (threat_level_attacker + mobility_attacker) - (threat_level_defender + mobility_defender)
-        return e3
+        e2 = (threat_level_attacker + mobility_attacker) - (threat_level_defender + mobility_defender)
+        return e2
 
     def move_candidates_for(self, player: Player) -> Iterable[CoordPair]:
         """Generate valid move candidates for a specific player."""
