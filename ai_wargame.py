@@ -41,6 +41,8 @@ class GameType(Enum):
     CompVsDefender = 2
     CompVsComp = 3
 
+class TimeoutException(Exception):
+    pass
 ##############################################################################################################
 
 @dataclass(slots=True)
@@ -251,6 +253,7 @@ class Game:
     stats: Stats = field(default_factory=Stats)
     _attacker_has_ai : bool = True
     _defender_has_ai : bool = True
+    current_best_move: (CoordPair, ) = None
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
@@ -684,9 +687,12 @@ class Game:
                 AIP += 1
         return VP, TP, FP, PP, AIP
     
-    def minimax(self, depth, is_maximizing):
+    def minimax(self, depth, is_maximizing, start_time):
         if depth == 0:
             return self.evaluate_board(self.options.evaluation_function), None
+        
+        if (datetime.now() - start_time).total_seconds() > self.options.timeout:
+            raise TimeoutException()
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
@@ -696,25 +702,30 @@ class Game:
             for move in possible_moves:
                 cloned_game = self.clone()
                 cloned_game.perform_move(move, True)
-                eval, _ = cloned_game.minimax(depth - 1, False)
+                eval, _ = cloned_game.minimax(depth - 1, False, start_time)
                 if eval > max_eval:
                     max_eval = eval
                     best_move = move
+                    self.current_best_move = (best_move, max_eval)
             return max_eval, best_move
         else:
             min_eval = float('inf')
             for move in possible_moves:
                 cloned_game = self.clone()
                 cloned_game.perform_move(move, True)
-                eval, _ = cloned_game.minimax(depth - 1, True)
+                eval, _ = cloned_game.minimax(depth - 1, True, start_time)
                 if eval < min_eval:
                     min_eval = eval
                     best_move = move
+                    self.current_best_move = (best_move, min_eval)
             return min_eval, best_move
 
-    def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta):
+    def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta, start_time):
         if depth == 0:
             return self.evaluate_board(self.options.evaluation_function), None
+        
+        if (datetime.now() - start_time).total_seconds() > self.options.timeout:
+            raise TimeoutException()
 
         possible_moves = list(self.move_candidates())
         best_move = possible_moves[0]
@@ -724,12 +735,13 @@ class Game:
             for move in possible_moves:
                 cloned_game = self.clone()
                 cloned_game.perform_move(move, True)
-                eval, _ = cloned_game.minimax_alpha_beta(depth - 1, False, alpha, beta)
+                eval, _ = cloned_game.minimax_alpha_beta(depth - 1, False, alpha, beta, start_time)
                 if eval > max_eval:
                     max_eval = eval
                     best_move = move
-                alpha = max(alpha, eval)  # Update the alpha value
-                if beta <= alpha:  # Beta cut-off
+                    self.current_best_move = (best_move, max_eval)
+                alpha = max(alpha, eval)
+                if beta <= alpha:
                     break
             return max_eval, best_move
         else:
@@ -737,28 +749,37 @@ class Game:
             for move in possible_moves:
                 cloned_game = self.clone()
                 cloned_game.perform_move(move, True)
-                eval, _ = cloned_game.minimax_alpha_beta(depth - 1, True, alpha, beta)
+                eval, _ = cloned_game.minimax_alpha_beta(depth - 1, True, alpha, beta, start_time)
                 if eval < min_eval:
                     min_eval = eval
                     best_move = move
-                beta = min(beta, eval)  # Update the beta value
-                if beta <= alpha:  # Alpha cut-off
+                    self.current_best_move = (best_move, min_eval)
+                beta = min(beta, eval)
+                if beta <= alpha:
                     break
             return min_eval, best_move
     
     def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
+        self.current_best_move = None
         start_time = datetime.now()
 
         if (self.options.alpha_beta):
-             (score, move) = self.minimax_alpha_beta(3, self.next_player == Player.Attacker, -float('inf'), float('inf'))
+            try:
+                (score, move) = self.minimax_alpha_beta(3, self.next_player == Player.Attacker, -float('inf'), float('inf'), start_time)
+            except TimeoutException:
+                print("Search timed out!")
+                move = self.current_best_move[0]
         else:
-             (score, move) = self.minimax(3, self.next_player == Player.Attacker)
+            try:
+                (score, move) = self.minimax(3, self.next_player == Player.Attacker, start_time)
+            except TimeoutException:
+                print("Search timed out!")
+                move = self.current_best_move[0]
        
         elapsed_seconds = (datetime.now() - start_time).total_seconds()
         self.stats.total_seconds += elapsed_seconds
-        print(f"Heuristic score: {score}")
-        # print(f"Average recursive depth: {avg_depth:0.1f}")
+        print(f"Heuristic score: {self.current_best_move[1]}")
         print(f"Evals per depth: ",end='')
         for k in sorted(self.stats.evaluations_per_depth.keys()):
             print(f"{k}:{self.stats.evaluations_per_depth[k]} ",end='')
@@ -832,6 +853,7 @@ class Game:
                 break
             else:
                 print("Invalid choice. Please choose e0, e1, or e2.")
+
 
 ##############################################################################################################
 
