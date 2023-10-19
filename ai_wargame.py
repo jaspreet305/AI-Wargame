@@ -703,7 +703,7 @@ class Game:
         if depth == 0:
             return self.evaluate_board(self.options.evaluation_function, depth), None
 
-        if (datetime.now() - start_time).total_seconds() > self.options.timeout:
+        if (datetime.now() - start_time).total_seconds() > self.options.timeout - 0.1:
             raise TimeoutException()
 
         possible_moves = list(self.move_candidates())
@@ -740,7 +740,7 @@ class Game:
         if depth == 0:
             return self.evaluate_board(self.options.evaluation_function, depth), None
 
-        if (datetime.now() - start_time).total_seconds() > self.options.timeout:
+        if (datetime.now() - start_time).total_seconds() > self.options.timeout - 0.1:
             raise TimeoutException()
 
         possible_moves = list(self.move_candidates())
@@ -894,6 +894,7 @@ def main():
     game_type = int(input(f'\nPlease enter the game type (1-4)\n1. Attacker vs Defender\n2. Attacker vs AI\n3. AI vs Defender\n4. AI vs AI\n'))
     alpha_beta = True
     timeout = 100
+    evaluation_function = "N/A"
 
     if (game_type == 2 or game_type == 3 or game_type == 4):
         alpha_beta = int(input(f'\nPlease enter 1 for alpha-beta or 0 for minimax: '))
@@ -912,13 +913,14 @@ def main():
     elif game_type == 4:
         game_type = GameType.CompVsComp
 
-    choice = input(f"\nChoose an evaluation function (e0, e1, e2): ")
-    if choice == "e0":
-        evaluation_function = "e0"
-    elif choice == "e1":
-        evaluation_function = "e1"
-    elif choice == "e2":
-        evaluation_function = "e2"
+    if game_type is not GameType.AttackerVsDefender:
+        choice = input(f"\nChoose an evaluation function (e0, e1, e2): ")
+        if choice == "e0":
+            evaluation_function = "e0"
+        elif choice == "e1":
+            evaluation_function = "e1"
+        elif choice == "e2":
+            evaluation_function = "e2"
 
     options = Options(max_turns=max_turns, game_type=game_type, alpha_beta=alpha_beta, timeout=timeout, evaluation_function=evaluation_function)
 
