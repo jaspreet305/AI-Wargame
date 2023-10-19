@@ -697,10 +697,18 @@ class Game:
     def minimax(self, depth, is_maximizing, start_time):
         global TOTAL_EVALUATIONS
 
+        # Increment the global evaluations count
+        TOTAL_EVALUATIONS += 1
+
+        # Increment the evaluations count for the current depth
+        if depth in self.stats.evaluations_per_depth:
+            self.stats.evaluations_per_depth[depth] += 1
+        else:
+            self.stats.evaluations_per_depth[depth] = 1
+
         if depth == 0:
-            TOTAL_EVALUATIONS += 1
             return self.evaluate_board(self.options.evaluation_function, depth), None
-        
+
         if (datetime.now() - start_time).total_seconds() > self.options.timeout:
             raise TimeoutException()
 
@@ -729,11 +737,20 @@ class Game:
                     best_move = move
                     self.current_best_move = (best_move, min_eval)
             return min_eval, best_move
-
     def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta, start_time):
+        global TOTAL_EVALUATIONS
+
+        # Increment the global evaluations count
+        TOTAL_EVALUATIONS += 1
+
+        # Increment the evaluations for the current depth
+        if depth not in self.stats.evaluations_per_depth:
+            self.stats.evaluations_per_depth[depth] = 0
+        self.stats.evaluations_per_depth[depth] += 1
+
         if depth == 0:
             return self.evaluate_board(self.options.evaluation_function, depth), None
-        
+
         if (datetime.now() - start_time).total_seconds() > self.options.timeout:
             raise TimeoutException()
 
@@ -768,7 +785,7 @@ class Game:
                 if beta <= alpha:
                     break
             return min_eval, best_move
-    
+
     def suggest_move(self) -> CoordPair | None:
         """Suggest the next move using minimax alpha beta. TODO: REPLACE RANDOM_MOVE WITH PROPER GAME LOGIC!!!"""
         self.current_best_move = None
@@ -952,24 +969,25 @@ def main():
                 exit(1)
                 
     total_evals = TOTAL_EVALUATIONS
-    print(f"Cumulative evals: {total_evals}")
+    print(f"Cumulative evals: {TOTAL_EVALUATIONS}")
 
     print("Cumulative evals by depth: ", end='')
-    for depth, count in game.evaluations_by_depth.items():
+    for depth, count in sorted(game.stats.evaluations_per_depth.items()):
         print(f"{depth}={count} ", end='')
     print()
 
     print("Cumulative % evals by depth: ", end='')
-    for depth, count in game.evaluations_by_depth.items():
-        if total_evals != 0:
-            percentage = (count / total_evals) * 100
+    for depth, count in sorted(game.stats.evaluations_per_depth.items()):
+        if TOTAL_EVALUATIONS != 0:
+            percentage = (count / TOTAL_EVALUATIONS) * 100
         else:
             percentage = 0
         print(f"{depth}={percentage:.1f}% ", end='')
     print()
 
-    avg_branching_factor = total_evals / (game.evaluations_by_depth[0] if 0 in game.evaluations_by_depth else 1)
+    avg_branching_factor = TOTAL_EVALUATIONS / (game.stats.evaluations_per_depth[0] if 0 in game.stats.evaluations_per_depth else 1)
     print(f"Average branching factor: {avg_branching_factor:.1f}")
+
 
 
 ##############################################################################################################
