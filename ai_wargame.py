@@ -15,7 +15,6 @@ from collections import defaultdict
 # maximum and minimum values for our heuristic scores (usually represents an end of game condition)
 MAX_HEURISTIC_SCORE = 2000000000
 MIN_HEURISTIC_SCORE = -2000000000
-TOTAL_EVALUATIONS = 0
 
 class UnitType(Enum):
     """Every unit type."""
@@ -256,8 +255,8 @@ class Game:
     _attacker_has_ai : bool = True
     _defender_has_ai : bool = True
     current_best_move: (CoordPair, ) = None
-    total_evaluations: int = 0  # Added this line
-    evaluations_by_depth: defaultdict[int, int] = field(default_factory=defaultdict)  # Added this line
+    total_evaluations: int = 0
+    evaluations_by_depth: defaultdict[int, int] = field(default_factory=defaultdict)
 
     def __post_init__(self):
         """Automatically called after class init to set up the default board state."""
@@ -695,12 +694,7 @@ class Game:
         return VP, TP, FP, PP, AIP
     
     def minimax(self, depth, is_maximizing, start_time):
-        global TOTAL_EVALUATIONS
 
-        # Increment the global evaluations count
-        TOTAL_EVALUATIONS += 1
-
-        # Increment the evaluations count for the current depth
         if depth in self.stats.evaluations_per_depth:
             self.stats.evaluations_per_depth[depth] += 1
         else:
@@ -738,12 +732,7 @@ class Game:
                     self.current_best_move = (best_move, min_eval)
             return min_eval, best_move
     def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta, start_time):
-        global TOTAL_EVALUATIONS
 
-        # Increment the global evaluations count
-        TOTAL_EVALUATIONS += 1
-
-        # Increment the evaluations for the current depth
         if depth not in self.stats.evaluations_per_depth:
             self.stats.evaluations_per_depth[depth] = 0
         self.stats.evaluations_per_depth[depth] += 1
@@ -967,28 +956,24 @@ def main():
             else:
                 print("Computer doesn't know what to do!!!")
                 exit(1)
-                
-    total_evals = TOTAL_EVALUATIONS
-    print(f"Cumulative evals: {TOTAL_EVALUATIONS}")
 
-    print("Cumulative evals by depth: ", end='')
-    for depth, count in sorted(game.stats.evaluations_per_depth.items()):
-        print(f"{depth}={count} ", end='')
-    print()
+    total_evals = sum(game.stats.evaluations_per_depth.values());
 
-    print("Cumulative % evals by depth: ", end='')
-    for depth, count in sorted(game.stats.evaluations_per_depth.items()):
-        if TOTAL_EVALUATIONS != 0:
-            percentage = (count / TOTAL_EVALUATIONS) * 100
-        else:
-            percentage = 0
-        print(f"{depth}={percentage:.1f}% ", end='')
-    print()
+    cumulative_evals_by_depth_str = "Cumulative evals by depth: " + ' '.join([f"{depth}={count}" for depth, count in sorted(game.stats.evaluations_per_depth.items())])
 
-    avg_branching_factor = TOTAL_EVALUATIONS / (game.stats.evaluations_per_depth[0] if 0 in game.stats.evaluations_per_depth else 1)
+    cumulative_percentage_evals_by_depth_str = "Cumulative % evals by depth: " + ' '.join([f"{depth}={(count / total_evals) * 100 if total_evals != 0 else 0:.1f}%" for depth, count in sorted(game.stats.evaluations_per_depth.items())])
+
+    print(f"Cumulative evals: {total_evals}")
+    print(cumulative_evals_by_depth_str)
+    print(cumulative_percentage_evals_by_depth_str)
+
+    avg_branching_factor = total_evals / (game.stats.evaluations_per_depth[0] if 0 in game.stats.evaluations_per_depth else 1)
     print(f"Average branching factor: {avg_branching_factor:.1f}")
 
-
+    logging.info(f"Cumulative evals: {total_evals}")
+    logging.info(cumulative_evals_by_depth_str)
+    logging.info(cumulative_percentage_evals_by_depth_str)
+    logging.info(f"Average branching factor: {avg_branching_factor:.1f}")
 
 ##############################################################################################################
 
